@@ -24,12 +24,15 @@ test('非 ws 地址被拒绝', () => {
   assert.ok(v.errors.some((e) => /wsUrl/.test(e)));
 });
 
-test('相对路径按 NapCat 目录解析', () => {
-  const cfg = normalizeConfig({ profiles: [{ napcat: { dir: 'D:/NapCat.Shell', qrPath: 'cache/qrcode.png', logPath: 'a.log' } }] });
-  const r = resolveProfile(cfg, 'D:/proj', 0);
-  assert.equal(r.napcatDir.replaceAll('\\', '/'), 'D:/NapCat.Shell');
-  assert.equal(r.qrPath.replaceAll('\\', '/'), 'D:/NapCat.Shell/cache/qrcode.png');
-  assert.equal(r.logPath.replaceAll('\\', '/'), 'D:/NapCat.Shell/a.log');
+test('相对路径按 NapCat 目录解析（跨平台）', () => {
+  // 用当前平台的绝对路径，避免 Linux CI 上把 Windows 盘符当成相对路径
+  const base = path.resolve(os.tmpdir(), 'qlg-proj');
+  const napcatDir = path.join(base, 'NapCat.Shell');
+  const cfg = normalizeConfig({ profiles: [{ napcat: { dir: napcatDir, qrPath: 'cache/qrcode.png', logPath: 'a.log' } }] });
+  const r = resolveProfile(cfg, base, 0);
+  assert.equal(r.napcatDir, path.normalize(napcatDir));
+  assert.equal(r.qrPath, path.join(napcatDir, 'cache', 'qrcode.png'));
+  assert.equal(r.logPath, path.join(napcatDir, 'a.log'));
 });
 
 test('熔断：每小时重启上限生效', async () => {
