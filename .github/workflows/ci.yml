@@ -17,7 +17,7 @@ jobs:
         with:
           node-version: ${{ matrix.node }}
       - name: Unit tests
-        run: node --test test/
+        run: node --test test/*.test.mjs
       - name: CLI smoke (help/version)
         run: |
           node src/cli.mjs version

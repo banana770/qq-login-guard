@@ -37,7 +37,7 @@
     "setup": "node src/cli.mjs setup",
     "doctor": "node src/cli.mjs doctor",
     "rehearse": "node src/cli.mjs rehearse",
-    "test": "node --test test/"
+    "test": "node --test test/*.test.mjs"
   },
   "keywords": [
     "qq",
