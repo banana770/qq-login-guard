@@ -82,3 +82,31 @@ test('超过 1 小时的重启记录会被清理', () => {
   store.prune();
   assert.equal(store.state.restarts.length, 1);
 });
+
+test('拉起限速：每小时上限生效（防崩溃→拉起风暴）', async () => {
+  const store = new RuntimeStore(path.join(os.tmpdir(), `qlg-test5-${Date.now()}`), 'test');
+  await store.load();
+  store.markLaunch();
+  store.markLaunch();
+  store.markLaunch();
+  const g = gate(store.state, { policy: { maxLaunchPerHour: 3, launchCooldownMs: 0 } }, 'launch');
+  assert.equal(g.allow, false);
+  assert.match(g.reason, /拉起/);
+});
+
+test('拉起限速：冷却与连续失败转人工', async () => {
+  const store = new RuntimeStore(path.join(os.tmpdir(), `qlg-test6-${Date.now()}`), 'test');
+  await store.load();
+  store.markLaunch();
+  const cool = gate(store.state, { policy: { launchCooldownMs: 60000, maxLaunchPerHour: 99 } }, 'launch');
+  assert.equal(cool.allow, false);
+  assert.match(cool.reason, /冷却/);
+  const store2 = new RuntimeStore(path.join(os.tmpdir(), `qlg-test7-${Date.now()}`), 'test2');
+  await store2.load();
+  store2.markLaunchFailure();
+  store2.markLaunchFailure();
+  store2.markLaunchFailure();
+  const g2 = gate(store2.state, { policy: { maxLaunchFailures: 3, launchCooldownMs: 0, maxLaunchPerHour: 99 } }, 'launch');
+  assert.equal(g2.allow, false);
+  assert.match(g2.reason, /连续拉起失败/);
+});

@@ -164,6 +164,7 @@ export class Guard {
     // 1) 在线：清计数；QR_WAITING→ONLINE 已由 doHeal 播报过，不再重复通知
     if (cls.state === STATES.ONLINE) {
       rt.offlineStrikes = 0;
+      this.store.resetLaunchFailures();
       if (prevState !== STATES.ONLINE && prevState !== STATES.QR_WAITING && (rt.lastHealAt || rt.lastRestartAt)) {
         await this.notify('HEAL_OK', { extra: '已恢复在线' });
       }
@@ -207,8 +208,9 @@ export class Guard {
       return cls;
     }
 
-    // 4) 有待扫码二维码 → 自愈
+    // 4) 有待扫码二维码 → 自愈（能出码说明拉起是成功的，清掉拉起失败计数）
     if (wantsHeal(cls.state)) {
+      this.store.resetLaunchFailures();
       const g = gate(rt, this.resolved.profile, 'heal');
       if (!g.allow) {
         this.logEvent('warn', `自愈被拦截：${g.reason}`);
@@ -226,18 +228,37 @@ export class Guard {
       return cls;
     }
 
-    // 5) NapCat 没运行
+    // 5) NapCat 没运行：拉起要限速，避免"崩溃→拉起→再崩溃"风暴
     if (cls.state === STATES.NAPCAT_DOWN) {
       const launchEnabled = this.resolved.profile.napcat?.launch?.enabled;
       if (!launchEnabled || this.mode === 'follow') {
         this.logEvent('warn', 'NapCat 未运行（未启用 launch 或 follow 模式），无法自动拉起');
-      } else if (this.dryRun) {
-        this.logEvent('info', '[dry-run] 将执行：拉起 NapCat');
-        this.lastAction = { kind: 'launch', dryRun: true, at: nowIso() };
       } else {
-        const l = await launchNapcat(this.resolved, this.logger);
-        this.lastAction = { kind: 'launch', ...l, at: nowIso() };
-        if (l.ok) await waitForNapcatUp(this.resolved, this.resolved.profile.napcat?.launch?.waitMs ?? 90000);
+        const g = gate(rt, this.resolved.profile, 'launch');
+        if (!g.allow) {
+          this.logEvent('warn', `拉起被拦截：${g.reason}`);
+        } else if (this.dryRun) {
+          this.logEvent('info', '[dry-run] 将执行：拉起 NapCat');
+          this.lastAction = { kind: 'launch', dryRun: true, at: nowIso() };
+        } else {
+          const l = await launchNapcat(this.resolved, this.logger);
+          this.store.markLaunch();
+          this.lastAction = { kind: 'launch', ...l, at: nowIso() };
+          const up = l.ok ? await waitForNapcatUp(this.resolved, this.resolved.profile.napcat?.launch?.waitMs ?? 90000) : { ok: false };
+          if (up.ok) {
+            this.store.resetLaunchFailures();
+          } else {
+            const fails = this.store.markLaunchFailure();
+            const maxF = this.resolved.profile.policy?.maxLaunchFailures ?? 3;
+            this.logEvent('warn', `拉起 NapCat 未成功（连续 ${fails}/${maxF}）`);
+            if (fails >= maxF) {
+              const manualMs = this.resolved.profile.policy?.manualPauseMs ?? 30 * 60 * 1000;
+              this.store.setManual(manualMs, `连续 ${fails} 次拉起 NapCat 失败`);
+              this.lastAction = { kind: 'launch', ok: false, escalated: 'manual', failures: fails, at: nowIso() };
+              await this.notify('RISK_LIMITED', { extra: `连续 ${fails} 次拉起 NapCat 失败，已停止自动拉起并转人工。请检查 NapCat/QQ 版本兼容性、依赖与日志。` });
+            }
+          }
+        }
       }
     }
 

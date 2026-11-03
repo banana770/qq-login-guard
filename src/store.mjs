@@ -17,6 +17,9 @@ export function emptyRuntime(profileId = 'main') {
     lastHealAt: 0,
     restarts: [],
     heals: [],
+    launches: [],
+    launchFailures: 0,
+    lastLaunchAt: 0,
     manualUntil: 0,
     lastQrMd5: '',
     lastQrSeenAt: 0,
@@ -51,14 +54,19 @@ export class RuntimeStore {
   prune(now = Date.now()) {
     this.state.restarts = (this.state.restarts || []).filter((t) => now - t < HOUR);
     this.state.heals = (this.state.heals || []).filter((t) => now - t < DAY);
+    this.state.launches = (this.state.launches || []).filter((t) => now - t < HOUR);
     return this.state;
   }
 
   countRestartsLastHour() { this.prune(); return this.state.restarts.length; }
   countHealsLastDay() { this.prune(); return this.state.heals.length; }
+  countLaunchesLastHour() { this.prune(); return this.state.launches.length; }
 
   markRestart() { this.prune(); this.state.restarts.push(Date.now()); this.state.lastRestartAt = Date.now(); }
   markHeal() { this.prune(); this.state.heals.push(Date.now()); this.state.lastHealAt = Date.now(); }
+  markLaunch() { this.prune(); this.state.launches.push(Date.now()); this.state.lastLaunchAt = Date.now(); }
+  markLaunchFailure() { this.state.launchFailures = (this.state.launchFailures || 0) + 1; return this.state.launchFailures; }
+  resetLaunchFailures() { this.state.launchFailures = 0; }
 
   setManual(ms, reason = '') {
     this.state.manualUntil = Date.now() + ms;
@@ -74,13 +82,17 @@ function asRuntime(input) {
   const rt = input ?? emptyRuntime();
   rt.restarts = rt.restarts || [];
   rt.heals = rt.heals || [];
+  rt.launches = rt.launches || [];
+  rt.launchFailures = rt.launchFailures || 0;
   rt.prune = (now = Date.now()) => {
     rt.restarts = rt.restarts.filter((t) => now - t < HOUR);
     rt.heals = rt.heals.filter((t) => now - t < DAY);
+    rt.launches = rt.launches.filter((t) => now - t < HOUR);
     return rt;
   };
   rt.countRestartsLastHour = () => { rt.prune(); return rt.restarts.length; };
   rt.countHealsLastDay = () => { rt.prune(); return rt.heals.length; };
+  rt.countLaunchesLastHour = () => { rt.prune(); return rt.launches.length; };
   rt.inManual = (now = Date.now()) => Number(rt.manualUntil || 0) > now;
   return rt;
 }
@@ -100,6 +112,17 @@ export function gate(runtimeInput, profile, kind, now = Date.now()) {
     }
     if (Number.isFinite(pol.maxRestartPerHour) && runtime.countRestartsLastHour() >= pol.maxRestartPerHour) {
       return { allow: false, reason: `每小时重启已达上限 ${pol.maxRestartPerHour} 次` };
+    }
+  }
+  if (kind === 'launch') {
+    if (pol.launchCooldownMs && runtime.lastLaunchAt && now - runtime.lastLaunchAt < pol.launchCooldownMs) {
+      return { allow: false, reason: `拉起冷却中（${Math.round((pol.launchCooldownMs - (now - runtime.lastLaunchAt)) / 1000)}s）` };
+    }
+    if (Number.isFinite(pol.maxLaunchPerHour) && runtime.countLaunchesLastHour() >= pol.maxLaunchPerHour) {
+      return { allow: false, reason: `每小时拉起已达上限 ${pol.maxLaunchPerHour} 次` };
+    }
+    if (Number.isFinite(pol.maxLaunchFailures) && (runtime.launchFailures || 0) >= pol.maxLaunchFailures) {
+      return { allow: false, reason: `连续拉起失败 ${runtime.launchFailures} 次，已转人工` };
     }
   }
   if (kind === 'heal') {
