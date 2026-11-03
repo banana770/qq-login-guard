@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 1280px; height: 800px; overflow: hidden; background: #0b0e14; }
+  body {
+    font-family: "Microsoft YaHei", "PingFang SC", system-ui, sans-serif;
+    color: #e8edf7;
+    background:
+      radial-gradient(1100px 600px at 78% 38%, rgba(78,120,255,.28), transparent 60%),
+      radial-gradient(700px 500px at 12% 88%, rgba(150,80,255,.18), transparent 65%),
+      linear-gradient(160deg, #0b0e14 0%, #0d1220 55%, #0a0f1c 100%);
+    position: relative;
+  }
+  /* 底部 80px 为裁剪安全区，成片裁成 1280x720 */
+  .safe { position: absolute; inset: 0 0 80px 0; padding: 64px 72px; }
+  .grid { position: absolute; inset: 0; background-image:
+      linear-gradient(rgba(120,150,255,.06) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(120,150,255,.06) 1px, transparent 1px);
+    background-size: 48px 48px; mask-image: radial-gradient(900px 500px at 70% 45%, #000, transparent 78%); }
+  .top { position: relative; display: flex; align-items: center; gap: 14px; font-size: 22px; letter-spacing: 3px; color: #8fa3c8; }
+  .dot { width: 10px; height: 10px; border-radius: 50%; background: #39d98a; box-shadow: 0 0 14px #39d98a; }
+  h1 { position: relative; margin-top: 96px; font-size: 108px; line-height: 1.08; letter-spacing: 2px; font-weight: 900;
+       background: linear-gradient(92deg, #ffffff, #a9c4ff 60%, #7aa2ff); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  h1 .hl { display: inline-block; color: #39d98a; -webkit-text-fill-color: #39d98a; }
+  .sub { position: relative; margin-top: 34px; font-size: 34px; color: #b9c6dd; letter-spacing: 1px; }
+  .sub b { color: #fff; }
+  .tags { position: relative; margin-top: 46px; display: flex; gap: 14px; flex-wrap: wrap; }
+  .tag { border: 1px solid rgba(140,170,255,.45); color: #cfe0ff; border-radius: 999px; padding: 12px 22px; font-size: 24px; }
+  .foot { position: absolute; left: 72px; bottom: 18px; font-size: 22px; color: #7f92b4; letter-spacing: .5px; }
+  /* 右侧装饰二维码 */
+  .qr { position: absolute; right: 96px; top: 176px; width: 330px; height: 330px; border-radius: 26px;
+        background: rgba(10,16,30,.72); border: 1px solid rgba(120,160,255,.35);
+        box-shadow: 0 0 90px rgba(80,120,255,.35), inset 0 0 40px rgba(80,120,255,.12);
+        display: grid; grid-template-columns: repeat(2, 1fr); gap: 26px; padding: 34px; }
+  .qr div { border-radius: 10px;
+    background-image: linear-gradient(90deg, #cfe0ff 25%, transparent 25% 50%, #cfe0ff 50% 75%, transparent 75%),
+                      linear-gradient(#cfe0ff 25%, transparent 25% 50%, #cfe0ff 50% 75%, transparent 75%);
+    background-size: 26px 26px; opacity: .85; }
+  .qr div:nth-child(2) { opacity: .45; }
+  .qr div:nth-child(3) { opacity: .55; }
+  .qr div:nth-child(4) { opacity: .3; }
+  .badge { position: absolute; right: 96px; top: 536px; font-size: 22px; color: #9fb4d8; text-align: right; }
+</style>
+</head>
+<body>
+  <div class="grid"></div>
+  <div class="safe">
+    <div class="top"><span class="dot"></span> NapCat · OneBot 11 · 开源</div>
+    <h1>NapCat 掉线<br><span class="hl">自动重登</span></h1>
+    <div class="sub">模拟器里的手机 QQ 替你扫码 · <b>46 秒</b>恢复在线</div>
+    <div class="tags">
+      <span class="tag">不依赖 AstrBot</span>
+      <span class="tag">旁路守护</span>
+      <span class="tag">仅限本人账号</span>
+    </div>
+    <div class="foot">github.com/banana770/qq-login-guard</div>
+    <div class="qr"><div></div><div></div><div></div><div></div></div>
+    <div class="badge">掉线检测 → 出码 → 扫码<br>授权 → 验证在线</div>
+  </div>
+</body>
+</html>
