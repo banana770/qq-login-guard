@@ -1,5 +1,10 @@
 # qq-login-guard
 
+[![CI](https://github.com/banana770/qq-login-guard/actions/workflows/ci.yml/badge.svg)](https://github.com/banana770/qq-login-guard/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![Node](https://img.shields.io/badge/node-%3E%3D22-brightgreen)](package.json)
+[![Protocol](https://img.shields.io/badge/protocol-NapCat%20%2F%20OneBot11-orange)](docs/PROTOCOL_COMPAT.md)
+
 > **给 NapCat 接管的真人 QQ 号做「掉线自愈」的旁路守护进程。**
 > 检测掉线 → 让 NapCat 出二维码 → 驱动**安卓模拟器里的手机 QQ** 自动扫码登录 → 验证真的上线 → 失败则熔断并通知你。
 >
@@ -63,6 +68,26 @@ NapCat 被踢后，重新登录需要一次扫码授权；而扫码端必须是"
 - 识别到"被风控/需要短信验证/申诉"类日志时**立刻停手并通知**，绝不循环乱点。
 
 完整设计见 [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)。
+
+---
+
+## 实机验证记录（2026-11-03）
+
+**环境**：Windows 11 · MuMu 12（Android 12, 1080×1920）· 模拟器内手机 QQ 9.2.20 · NapCat（Windows）· Node 24
+
+**结果**：从"检测到登录态损坏"到"恢复在线"**全程无人工操作**，约 46 秒：
+
+| 时间 | 事件 |
+|---|---|
+| 18:07:19 | 检测到 `NAPCAT_NO_WS`（NapCat 进程在跑但 OneBot 端口未监听） |
+| 18:07:21 | 按 PID 关停卡住的 NapCat → **VBS 隐藏窗口**重新拉起 |
+| 18:07:23 | 新二维码生成（11s 内进入 `QR_WAITING`） |
+| 18:07:34 | 推码入相册 → 打开手机 QQ → 扫一扫 → 相册 → 确定 |
+| 18:08:03 | 评分选择器选中「登录」按钮（页面标题「登录确认」被正确排除） |
+| 18:08:09 | `waitForOnline` 深度验证通过 → **ONLINE**（179ms） |
+| 18:10:36 | AI 桥接自动重连：`已连接 NapCat OneBot WS` → `QQ 已登录` |
+
+> 说明：本次为**人为制造**掉线（停掉旧守护并让 NapCat 退出），用于验证全自动链路；腾讯自然风控踢出的场景需长期观察（本项目默认会记录 `audit.jsonl`，可直接用于统计）。
 
 ---
 

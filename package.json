@@ -2,6 +2,14 @@
   "name": "qq-login-guard",
   "version": "0.1.0",
   "description": "Host-agnostic login self-healing sidecar for NapCat / OneBot v11 real QQ accounts: detect logout, produce QR, drive an Android emulator's mobile QQ to scan it, verify recovery, notify and circuit-break.",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/banana770/qq-login-guard.git"
+  },
+  "homepage": "https://github.com/banana770/qq-login-guard#readme",
+  "bugs": {
+    "url": "https://github.com/banana770/qq-login-guard/issues"
+  },
   "type": "module",
   "engines": {
     "node": ">=22"
