@@ -224,6 +224,13 @@ async function detectAll() {
     const item = out.entries?.[k]; const hint = $('hint-' + field);
     if (!hint) continue;
     if (!item || !item.path) { hint.textContent = '未填写'; hint.className = 'hint warn'; continue; }
+    if (k === 'qrPath') {
+      // 二维码文件只在"需要扫码"时才存在：账号在线时不存在是正常的，不应标红
+      if (item.check?.exists) { hint.textContent = '✓ 二维码文件存在（当前确实处于待扫码状态）'; hint.className = 'hint ok'; }
+      else if (out.entries?.qrParent?.check?.exists) { hint.textContent = '⚠ 暂无二维码文件 —— 账号在线时正常；NapCat 下次掉线/需要扫码时会生成'; hint.className = 'hint warn'; }
+      else { hint.textContent = '✗ 二维码目录不存在 — ' + (out.entries?.qrParent?.path || item.path); hint.className = 'hint err'; }
+      continue;
+    }
     if (item.check?.exists) { hint.textContent = '✓ 存在' + (item.check.isDirectory ? '（目录）' : '') + ' — ' + item.path; hint.className = 'hint ok'; }
     else { hint.textContent = '✗ 不存在 — ' + item.path; hint.className = 'hint err'; }
   }
