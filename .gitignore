@@ -21,21 +21,3 @@ big_qr.png
 .DS_Store
 Thumbs.db
 desktop.ini
-
-# demo artifacts
-.demo/
-
-# generated video artifacts (rebuilt from source files)
-docs/community/video/audio/
-docs/community/video/segments/
-docs/community/video/slides/*.bmp
-docs/community/video/.chrome-profile/
-docs/community/video/verify/
-docs/community/video/*.mp4
-docs/community/video/tts.ps1
-docs/community/video/png2bmp.ps1
-docs/community/video/one2bmp.ps1
-docs/community/video/patch10.mjs
-docs/community/video/concat.txt
-docs/community/video/slides/*.png
-docs/community/video/*.wav
