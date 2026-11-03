@@ -6,6 +6,7 @@ import { constants } from 'node:fs';
 import { isWindows, resolveFrom, run, tcpProbe } from './util.mjs';
 import { resolveProfile } from './config.mjs';
 import { onebotCall, probeProcess } from './probe.mjs';
+import { locateAdb } from './adb-locate.mjs';
 
 const PASS = 'pass';
 const WARN = 'warn';
@@ -80,10 +81,11 @@ export async function runDoctor({ config, configDir, filePath = '' }) {
   }
 
   // 7. ADB / 设备
-  if ((p0.device?.driver || 'manual') === 'manual') {
+  if ((p0.device?.driver || 'mumu-adb') === 'manual') {
     add('设备驱动', WARN, 'manual（只通知）', '要全自动扫码请改 mumu-adb / generic-adb 并填 adb 路径与端口');
   } else {
-    const adbExe = resolved.adbExe || (isWindows ? 'adb.exe' : 'adb');
+    const adbExe = await locateAdb(resolved.adbExe, null);
+    add('adb 解析', PASS, resolved.adbExe ? `使用配置路径: ${adbExe}` : `自动查找: ${adbExe}`, '留空会自动扫描 MuMu 常见安装位置与 PATH');
     const v = await run(adbExe, ['version'], { timeoutMs: 6000 });
     add('ADB 可执行', v.code === 0 ? PASS : FAIL, v.code === 0 ? (v.stdout.split('\n')[0] || '').trim() : (v.stderr || 'adb 不可用').slice(0, 160), '填 adb.exe 绝对路径，或把 platform-tools 加入 PATH');
     if (v.code === 0) {

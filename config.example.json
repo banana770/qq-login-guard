@@ -23,7 +23,7 @@
         }
       },
       "device": {
-        "driver": "manual",
+        "driver": "mumu-adb",
         "adb": {
           "exe": "",
           "host": "127.0.0.1",

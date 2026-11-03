@@ -12,6 +12,11 @@ test('默认配置可校验通过', () => {
   assert.equal(v.ok, true, v.errors.join(';'));
 });
 
+test('默认设备驱动是 MuMu 全自动（不是 manual）', () => {
+  const cfg = normalizeConfig({});
+  assert.equal(cfg.profiles[0].device.driver, 'mumu-adb');
+});
+
 test('非 ws 地址被拒绝', () => {
   const cfg = normalizeConfig({ profiles: [{ napcat: { wsUrl: 'http://x' } }] });
   const v = validateConfig(cfg);

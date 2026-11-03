@@ -22,7 +22,7 @@ export const DEFAULT_CONFIG = {
         launch: { enabled: false, cmd: 'cmd.exe', args: ['/c', 'launcher-user.bat', '{account}'], cwd: '', waitMs: 90000 },
       },
       device: {
-        driver: 'manual',
+        driver: 'mumu-adb',
         adb: {
           exe: '',
           host: '127.0.0.1',

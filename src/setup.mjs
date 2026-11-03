@@ -101,12 +101,12 @@ export function renderSetupPage({ cfg, configFile = '', status = null }) {
 <div class="card"><h2>② 模拟器 / 手机（扫码执行器）</h2>
   <label class="field"><span class="label">驱动</span>
     <select id="driver">
-      <option value="manual" ${dev.driver === 'manual' ? 'selected' : ''}>manual — 只通知，人工扫码（无需模拟器）</option>
-      <option value="mumu-adb" ${dev.driver === 'mumu-adb' ? 'selected' : ''}>mumu-adb — MuMu 模拟器（ADB + UIAutomator 全自动）</option>
+      <option value="mumu-adb" ${dev.driver !== 'manual' && dev.driver !== 'generic-adb' ? 'selected' : ''}>mumu-adb — MuMu 模拟器（ADB + UIAutomator 全自动）[默认]</option>
       <option value="generic-adb" ${dev.driver === 'generic-adb' ? 'selected' : ''}>generic-adb — 其它模拟器/真机（雷电/夜神/真机）</option>
-    </select><span class="hint">没有安卓环境就选 manual；有模拟器再选 ADB 驱动</span>
+      <option value="manual" ${dev.driver === 'manual' ? 'selected' : ''}>manual — 只通知，人工扫码（没有安卓环境才选）</option>
+    </select><span class="hint">默认就是 MuMu 全自动；没有安卓环境才选 manual。adb 路径留空会自动扫描 MuMu 安装目录与 PATH</span>
   </label>
-  ${field('adb.exe 路径', 'adbExe', adb.exe, 'C:/platform-tools/adb.exe', '留空则从 PATH 查找 adb')}
+  ${field('adb.exe 路径', 'adbExe', adb.exe, 'C:/platform-tools/adb.exe', '留空则自动扫描 MuMu 安装目录 / PATH')}
   <div class="grid">
     ${field('设备 ADB 地址', 'adbHost', adb.host, '127.0.0.1', 'MuMu 默认 127.0.0.1:16384')}
     ${field('设备 ADB 端口', 'adbPort', adb.port, '16384', '雷电 5555 / 夜神 62001 / 逍遥 21503')}

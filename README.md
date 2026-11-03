@@ -68,6 +68,9 @@ NapCat 被踢后，重新登录需要一次扫码授权；而扫码端必须是"
 
 ## 快速开始
 
+> **默认就是 MuMu 模拟器全自动扫码**：驱动预置 `mumu-adb`，`adb.exe` 路径留空会自动扫描 MuMu 安装目录（如 `...\MuMu Player 12\shell\adb.exe`）与 PATH。
+> 没有安卓环境的用户才需要把驱动改成 `manual`（只通知）。安全起见首次仍建议先 `dry-run` 观察一轮，再切 `live`。
+
 ### 0. 你需要准备什么
 
 | 必需 | 说明 |
@@ -205,8 +208,8 @@ node src\cli.mjs run --mode attach --live
 | | 二维码相对路径 | 默认 `cache/qrcode.png`（相对 NapCat 目录） |
 | | NapCat 日志 | 用于识别风控/验证类关键字（可选） |
 | | OneBot Token | 建议留空、改用环境变量 `QQ_LOGIN_GUARD_TOKEN` |
-| 设备 | 驱动 | `manual`=只通知人工扫码；`mumu-adb` / `generic-adb`=全自动 |
-| | adb.exe 路径 | 留空则从 PATH 查找 |
+| 设备 | 驱动 | **默认 `mumu-adb`（MuMu 全自动扫码）**；`generic-adb`=其它模拟器/真机；`manual`=只通知人工扫码（没有安卓环境才选） |
+| | adb.exe 路径 | **留空会自动扫描 MuMu 安装目录与 PATH**；找不到再手填 |
 | | 设备 ADB 地址/端口 | MuMu 默认 `127.0.0.1:16384`；雷电 5555；夜神 62001；逍遥 21503 |
 | | **冷启动快捷方式** | 见上文「找不到模拟器里 QQ 的位置」 |
 | | **手机 QQ 包名 / 启动 Activity** | 国服默认即可 |

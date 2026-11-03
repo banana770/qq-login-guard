@@ -7,13 +7,15 @@ import path from 'node:path';
 import { isWindows, run, sleep } from '../util.mjs';
 import { upscaleQr } from '../image.mjs';
 import { fileStat } from '../util.mjs';
+import { locateAdb } from '../adb-locate.mjs';
 
 const BASE_W = 1080;
 const BASE_H = 1920;
 
 export function createAdbDriver({ resolved, logger, profileName, dataDir }) {
   const adbCfg = resolved.profile.device?.adb ?? {};
-  const adbExe = resolved.adbExe || (isWindows ? 'adb.exe' : 'adb');
+  let adbExe = resolved.adbExe || (isWindows ? 'adb.exe' : 'adb');
+  let adbResolved = Boolean(resolved.adbExe);
   const serial = `${adbCfg.host || '127.0.0.1'}:${adbCfg.port || 16384}`;
   const remotePic = adbCfg.remotePic || '/storage/emulated/0/DCIM/Camera/qr_fresh.png';
   const qqPackage = adbCfg.qqPackage || 'com.tencent.mobileqq';
@@ -22,7 +24,16 @@ export function createAdbDriver({ resolved, logger, profileName, dataDir }) {
   const localTmp = path.join(dataDir, 'qr_fresh.png');
   let screen = null;
 
+  /** 首次使用时解析 adb：优先配置路径 → MuMu 常见安装位置 → PATH */
+  async function ensureAdb() {
+    if (adbResolved) return adbExe;
+    adbExe = await locateAdb(resolved.adbExe, logger);
+    adbResolved = true;
+    return adbExe;
+  }
+
   async function adb(args, timeoutMs = 15000) {
+    await ensureAdb();
     const r = await run(adbExe, ['-s', serial, ...args], { timeoutMs });
     if (r.code !== 0) {
       throw new Error(`adb ${args.slice(0, 2).join(' ')} 失败: ${(r.stderr || r.stdout || 'exit ' + r.code).trim().slice(0, 200)}`);
@@ -30,11 +41,13 @@ export function createAdbDriver({ resolved, logger, profileName, dataDir }) {
     return (r.stdout || '').trim();
   }
   async function adbSoft(args, timeoutMs = 8000) {
+    await ensureAdb();
     const r = await run(adbExe, ['-s', serial, ...args], { timeoutMs });
     return { ok: r.code === 0, out: (r.stdout || '').trim(), err: (r.stderr || '').trim() };
   }
 
   async function deviceOnline() {
+    await ensureAdb();
     const r = await run(adbExe, ['-s', serial, 'get-state'], { timeoutMs: 4000 });
     return r.code === 0 && /device/.test(r.stdout || '');
   }

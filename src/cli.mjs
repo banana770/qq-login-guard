@@ -83,10 +83,10 @@ async function cmdInit(args) {
     p.napcat.dir = await ask('NapCat.Shell 目录', detected);
     p.napcat.wsUrl = await ask('OneBot WS 地址', 'ws://127.0.0.1:30011');
     p.napcat.account = await ask('被接管 QQ 号', '');
-    const driver = await ask('设备驱动 manual / mumu-adb / generic-adb', 'manual');
-    p.device.driver = ['manual', 'mumu-adb', 'generic-adb'].includes(driver) ? driver : 'manual';
+    const driver = await ask('设备驱动 mumu-adb / generic-adb / manual（没有安卓环境才选 manual）', 'mumu-adb');
+    p.device.driver = ['manual', 'mumu-adb', 'generic-adb'].includes(driver) ? driver : 'mumu-adb';
     if (p.device.driver !== 'manual') {
-      p.device.adb.exe = await ask('adb.exe 路径（留空则从 PATH 找）', '');
+      p.device.adb.exe = await ask('adb.exe 路径（留空自动扫描 MuMu 安装目录 / PATH）', '');
       p.device.adb.host = await ask('设备地址', '127.0.0.1');
       p.device.adb.port = Number(await ask('设备端口（MuMu 16384 / 雷电 5555 / 夜神 62001）', '16384'));
       p.device.adb.coldStartShortcut = await ask('模拟器快捷方式（可选）', '');
