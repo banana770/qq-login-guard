@@ -1,5 +1,5 @@
 // actions.mjs — 有副作用的动作（重启/拉起 NapCat），全部按 PID 精准操作
-import { open, unlink } from 'node:fs/promises';
+import { open, unlink, writeFile, mkdir } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { spawn } from 'node:child_process';
 import path from 'node:path';
@@ -60,13 +60,59 @@ export async function deleteOldQr(resolved) {
   return { removed };
 }
 
-/** 拉起 NapCat（detached，输出追加到文件） */
+/** Windows 下用 wscript + VBS 隐藏窗口拉起，并尽力隐藏 QQ/NapCat 的登录窗口 */
+async function launchNapcatHidden(resolved, logger, cmd, args, logFile) {
+  const dataDir = resolved.dataDir || path.dirname(logFile);
+  await mkdir(dataDir, { recursive: true });
+  const quote = (s) => (/[\s"]/.test(s) ? `"${String(s).replace(/"/g, '""')}"` : s);
+  const cmdline = [cmd, ...args].map(quote).join(' ');
+  const cwd = resolved.launchCwd || resolved.napcatDir || resolved.configDir;
+  const vbs = [
+    'Set sh = CreateObject("WScript.Shell")',
+    `sh.Run "cmd.exe /c cd /d ""${cwd.replace(/"/g, '""')}"" && call ${cmdline} >> ""${logFile.replace(/"/g, '""')}"" 2>&1", 0, False`,
+  ].join('\r\n');
+  const vbsPath = path.join(dataDir, 'napcat-hidden.vbs');
+  await writeFile(vbsPath, Buffer.concat([Buffer.from([0xff, 0xfe]), Buffer.from(vbs, 'utf16le')]));
+
+  const ps = path.join(dataDir, 'hide-qq-windows.ps1');
+  const psContent = [
+    "Add-Type -TypeDefinition 'using System; using System.Runtime.InteropServices; public class QlgWin { [DllImport(\"user32.dll\")] public static extern bool ShowWindow(IntPtr hWnd, int nCmdShow); }'",
+    "$names = @('QQ','NapCatWinBootMain','NapCat','QQNT','QQScLauncher')",
+    'for ($i = 0; $i -lt 40; $i++) {',
+    '  Get-Process -Name $names -ErrorAction SilentlyContinue | Where-Object { $_.MainWindowHandle -ne 0 } | ForEach-Object { [QlgWin]::ShowWindow($_.MainWindowHandle, 0) | Out-Null }',
+    '  Start-Sleep -Milliseconds 800',
+    '}',
+  ].join('\r\n');
+  await writeFile(ps, psContent, 'utf8');
+
+  const child = spawn('wscript.exe', [vbsPath], { detached: true, stdio: 'ignore', windowsHide: true });
+  child.unref();
+  if (resolved.profile.napcat?.launch?.hideWindows !== false) {
+    const hider = spawn('powershell.exe', ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', ps], {
+      detached: true, stdio: 'ignore', windowsHide: true,
+    });
+    hider.unref();
+  }
+  logger?.info('已发出 NapCat 启动命令（隐藏窗口）', { vbs: vbsPath });
+  return { ok: true, pid: child.pid, logFile, method: 'hidden-vbs' };
+}
+
+/** 拉起 NapCat（默认后台隐藏；launch.background=false 时退回普通 spawn） */
 export async function launchNapcat(resolved, logger) {
   const launch = resolved.profile.napcat?.launch ?? {};
   if (!launch.enabled) return { ok: false, reason: 'launch.disabled' };
   const cmd = launch.cmd || (isWindows ? 'cmd.exe' : 'bash');
   const args = (launch.args || []).map((a) => String(a).replaceAll('{account}', resolved.account || ''));
   const logFile = path.join(resolved.napcatDir || resolved.configDir, 'qq-login-guard.napcat.log');
+
+  if (isWindows && launch.background !== false) {
+    try {
+      return await launchNapcatHidden(resolved, logger, cmd, args, logFile);
+    } catch (e) {
+      logger?.warn('隐藏启动失败，退回普通 spawn', { error: String(e && e.message ? e.message : e) });
+    }
+  }
+
   let fd = 'ignore';
   try { fd = await open(logFile, 'a'); } catch { fd = 'ignore'; }
   let child;
@@ -85,7 +131,7 @@ export async function launchNapcat(resolved, logger) {
     try { if (typeof fd !== 'string') await fd.close(); } catch {}
   }
   logger?.info('已发出 NapCat 启动命令', { pid: child.pid, cmd, args: args.slice(0, 3) });
-  return { ok: true, pid: child.pid, logFile };
+  return { ok: true, pid: child.pid, logFile, method: 'spawn' };
 }
 
 /** 等待端口监听或二维码出现（谁先到算谁） */

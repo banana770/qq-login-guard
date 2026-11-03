@@ -12,6 +12,8 @@
         "logPath": "napcat_hidden.log",
         "launch": {
           "enabled": false,
+          "background": true,
+          "hideWindows": false,
           "cmd": "cmd.exe",
           "args": [
             "/c",
@@ -48,7 +50,8 @@
         "maxAutoHealPerDay": 12,
         "staleQrMs": 240000,
         "catchUpWindowMs": 1800000,
-        "manualPauseMs": 1800000
+        "manualPauseMs": 1800000,
+        "qrPushMaxAgeMs": 60000
       },
       "notify": {
         "channels": []

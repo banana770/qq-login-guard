@@ -161,12 +161,11 @@ export class Guard {
     rt.lastState = cls.state;
     rt.lastStateAt = nowIso();
 
-    // 1) 在线：清计数、必要时播报恢复
+    // 1) 在线：清计数；QR_WAITING→ONLINE 已由 doHeal 播报过，不再重复通知
     if (cls.state === STATES.ONLINE) {
       rt.offlineStrikes = 0;
-      if (prevState !== STATES.ONLINE && (rt.lastHealAt || rt.lastRestartAt)) {
-        const cost = rt.lastHealAt ? Date.now() - rt.lastHealAt : 0;
-        await this.notify('HEAL_OK', { extra: cost ? `${Math.round(cost / 1000)}s` : undefined });
+      if (prevState !== STATES.ONLINE && prevState !== STATES.QR_WAITING && (rt.lastHealAt || rt.lastRestartAt)) {
+        await this.notify('HEAL_OK', { extra: '已恢复在线' });
       }
       this.store.clearManual();
       await this.store.save();
@@ -247,12 +246,23 @@ export class Guard {
   }
 
   async doRestart(reason) {
+    const launchEnabled = this.resolved.profile.napcat?.launch?.enabled && this.mode !== 'follow';
+    if (!launchEnabled) {
+      // 不能拉起就不要杀：否则会把 NapCat 弄成"死着没人管"。转人工 + 长暂停。
+      const manualMs = this.resolved.profile.policy?.manualPauseMs ?? 30 * 60 * 1000;
+      this.store.setManual(manualMs, `需要重启 NapCat（${reason}），但 launch 未启用`);
+      this.store.markRestart();
+      this.lastAction = { kind: 'restart', skipped: true, reason: 'launch.disabled（未杀进程）', at: nowIso() };
+      this.logEvent('warn', '需要重启 NapCat 但 launch 未启用，已转人工（未杀进程）。把 napcat.launch.enabled 打开或手动重启。');
+      await this.notify('RESTARTED', { extra: `需要人工重启 NapCat（${reason}）：launch 未启用` });
+      return;
+    }
     this.logEvent('warn', `重启 NapCat：${reason}`);
     this.store.markRestart();
     const killed = await killNapcat(this.resolved, this.logger);
     await deleteOldQr(this.resolved);
     let launched = { ok: false, reason: 'launch.disabled' };
-    if (this.resolved.profile.napcat?.launch?.enabled && this.mode !== 'follow') {
+    if (launchEnabled) {
       launched = await launchNapcat(this.resolved, this.logger);
       await waitForNapcatUp(this.resolved, this.resolved.profile.napcat?.launch?.waitMs ?? 90000);
     }
@@ -264,14 +274,22 @@ export class Guard {
     this.logEvent('info', `开始自动扫码自愈（驱动=${this.driver.name}）`);
     this.store.markHeal();
     try {
-      // 二维码太旧时先等 NapCat 刷新（原实现同款逻辑，但等待窗口配置化）
+      // 二维码有 TTL（约 2 分钟）。如果当前码已经太旧，先等 NapCat 刷新出新码再推，
+      // 避免"推了一张快过期的码→扫码成功但确认失败"。
+      const maxAge = this.resolved.profile.policy?.qrPushMaxAgeMs ?? 60000;
       const qrStat = await fileStat(this.resolved.qrPath);
-      if (qrStat.exists && Date.now() - qrStat.mtimeMs > (this.resolved.profile.policy?.staleQrMs ?? 240000)) {
-        const before = qrStat.mtimeMs;
-        for (let i = 0; i < 30; i++) {
-          await sleep(1500);
-          const cur = await fileStat(this.resolved.qrPath);
-          if (cur.exists && cur.mtimeMs > before) break;
+      if (qrStat.exists) {
+        const ageMs = Date.now() - qrStat.mtimeMs;
+        this.logEvent('info', `二维码年龄 ${Math.round(ageMs / 1000)}s（推码上限 ${Math.round(maxAge / 1000)}s）`);
+        if (ageMs > maxAge) {
+          const before = qrStat.mtimeMs;
+          let refreshed = false;
+          for (let i = 0; i < 40; i++) {
+            await sleep(1500);
+            const cur = await fileStat(this.resolved.qrPath);
+            if (cur.exists && cur.mtimeMs > before) { refreshed = true; break; }
+          }
+          this.logEvent(refreshed ? 'info' : 'warn', refreshed ? '已等到 NapCat 刷新二维码' : '等待新二维码超时，仍使用当前码（可能失败）');
         }
       }
       const res = await this.driver.heal({ qrPath: this.resolved.qrPath, profileName: this.resolved.profile.id });

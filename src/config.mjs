@@ -19,7 +19,7 @@ export const DEFAULT_CONFIG = {
         dir: '',
         qrPath: 'cache/qrcode.png',
         logPath: 'napcat_hidden.log',
-        launch: { enabled: false, cmd: 'cmd.exe', args: ['/c', 'launcher-user.bat', '{account}'], cwd: '', waitMs: 90000 },
+        launch: { enabled: false, background: true, hideWindows: false, cmd: 'cmd.exe', args: ['/c', 'launcher-user.bat', '{account}'], cwd: '', waitMs: 90000 },
       },
       device: {
         driver: 'mumu-adb',
@@ -42,6 +42,7 @@ export const DEFAULT_CONFIG = {
         maxRestartPerHour: 3,
         maxAutoHealPerDay: 12,
         staleQrMs: 240000,
+        qrPushMaxAgeMs: 60000,
         catchUpWindowMs: 1800000,
         manualPauseMs: 1800000,
       },

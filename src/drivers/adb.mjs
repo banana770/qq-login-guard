@@ -107,6 +107,8 @@ export function createAdbDriver({ resolved, logger, profileName, dataDir }) {
         desc: get('content-desc'),
         cls: get('class'),
         id: get('resource-id'),
+        clickable: get('clickable') === 'true',
+        enabled: get('enabled') !== 'false',
         bounds: { x1, y1, x2, y2 },
         center: [Math.round((x1 + x2) / 2), Math.round((y1 + y2) / 2)],
       });
@@ -186,18 +188,51 @@ export function createAdbDriver({ resolved, logger, profileName, dataDir }) {
   }
 
   async function confirmAuthorization() {
-    for (let attempt = 1; attempt <= 6; attempt++) {
-      const xml = await dumpUi();
-      const hit = nodes(xml).find((n) => /登录|确认|允许|同意/.test(n.text) && /Button|TextView|android\.widget/.test(n.cls));
-      if (hit && hit.center[0] > 0) {
-        logger?.info(`找到授权按钮「${hit.text}」，点击 (${hit.center.join(',')})`);
-        await tapNode(hit);
-        return { ok: true, via: 'selector', text: hit.text };
+    // 关键：页面标题也叫「登录确认」，不能直接点它；要用"精确文本 + Button + 下半屏"打分，
+    // 点完一次后检查授权页是否还在，仍在则试下一个候选，最后才用静态兜底坐标。
+    const exact = /^(登录|确认登录|确认|允许|同意|立即登录|确定)$/;
+    const loose = /(登录|确认|允许|同意)/;
+    const scr = await getScreen();
+
+    for (let round = 1; round <= 3; round++) {
+      const xml = await dumpUi('qq_auth');
+      const cands = nodes(xml)
+        .filter((n) => {
+          const label = `${n.text || ''} ${n.desc || ''}`.trim();
+          return label && (exact.test((n.text || n.desc || '').trim()) || loose.test(label));
+        })
+        .map((n) => {
+          const label = (n.text || n.desc || '').trim();
+          let score = 0;
+          if (exact.test(label)) score += 5;
+          else if (loose.test(label)) score += 1;
+          if (/Button/i.test(n.cls)) score += 3;
+          if (n.clickable) score += 2;
+          if (n.center[1] > scr.h * 0.55) score += 2;
+          if (/登录确认|登录失败|请求失败|二维码/.test(label) && !exact.test(label)) score -= 5;
+          const w = n.bounds.x2 - n.bounds.x1;
+          const h = n.bounds.y2 - n.bounds.y1;
+          if (w < 60 || h < 36) score -= 2;
+          return { n, label, score };
+        })
+        .filter((x) => x.score >= 5)
+        .sort((a, b) => b.score - a.score);
+
+      if (cands.length) {
+        const pick = cands[0];
+        logger?.info(`授权按钮候选: ${cands.slice(0, 4).map((c) => `${c.label}(${c.score})`).join(' / ')} → 点击 (${pick.n.center.join(',')})`);
+        await tapNode(pick.n);
+        await sleep(1800);
+        const after = await dumpUi('qq_auth_after');
+        if (!/登录确认|确认登录/.test(after)) return { ok: true, via: 'selector', text: pick.label, score: pick.score };
+        logger?.warn('点击后授权页仍在，尝试下一个候选');
+        continue;
       }
       await sleep(1000);
     }
-    logger?.warn('未匹配到授权按钮，使用兜底坐标');
+    logger?.warn('未匹配到授权按钮，使用兜底坐标 (540,1384)');
     await tapScaled(540, 1384);
+    await sleep(1500);
     return { ok: true, via: 'fallback-coord' };
   }
 

@@ -7,6 +7,7 @@ export const STATES = {
   RISK_LIMITED: 'RISK_LIMITED',
   VERIFY_REQUIRED: 'VERIFY_REQUIRED',
   WS_HUNG: 'WS_HUNG',
+  NAPCAT_NO_WS: 'NAPCAT_NO_WS',
   NAPCAT_DOWN: 'NAPCAT_DOWN',
   COOLDOWN: 'COOLDOWN',
   MANUAL_TAKEOVER: 'MANUAL_TAKEOVER',
@@ -21,6 +22,7 @@ export const STATE_META = {
   RISK_LIMITED: { label: '账号被风控/限制登录（需本人处理）', severity: 'error', auto: false },
   VERIFY_REQUIRED: { label: '需要人工验证（短信/设备锁/申诉）', severity: 'error', auto: false },
   WS_HUNG: { label: '端口在但 OneBot 无响应', severity: 'warn', auto: true },
+  NAPCAT_NO_WS: { label: 'NapCat 在跑但 OneBot 未就绪（未登录/卡住）', severity: 'warn', auto: true },
   NAPCAT_DOWN: { label: 'NapCat 未运行', severity: 'warn', auto: true },
   COOLDOWN: { label: '冷却中（限制重试）', severity: 'info', auto: false },
   MANUAL_TAKEOVER: { label: '已转人工（停止自动动作）', severity: 'error', auto: false },
@@ -73,6 +75,10 @@ export function classify(probe, { staleQrMs = 240000 } = {}) {
     ev.push('未发现 NapCat 进程');
     return mk(STATES.NAPCAT_DOWN, 'NapCat 进程未运行且端口未监听', ev);
   }
+  if (napcatProc.running === true && !port.listening) {
+    ev.push(`NapCat 进程在跑 (PID ${(napcatProc.pids || []).join(',') || '?'}) 但 OneBot 端口未监听`);
+    return mk(STATES.NAPCAT_NO_WS, 'NapCat 在跑但 OneBot 未就绪（可能卡在登录/二维码已失效），需要重启出码', ev);
+  }
   ev.push('证据不足');
   return mk(STATES.UNKNOWN, '无法判定（进程探测不可用或登录中）', ev);
 }
@@ -88,7 +94,7 @@ export function needsManual(state) {
 
 /** 哪些状态触发"重启 NapCat" */
 export function wantsRestart(state) {
-  return state === STATES.SUSPECT_OFFLINE || state === STATES.LOGIN_INVALID || state === STATES.WS_HUNG;
+  return state === STATES.SUSPECT_OFFLINE || state === STATES.LOGIN_INVALID || state === STATES.WS_HUNG || state === STATES.NAPCAT_NO_WS;
 }
 
 /** 哪些状态触发"自动扫码自愈" */

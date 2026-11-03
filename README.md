@@ -178,6 +178,13 @@ node src\cli.mjs run --mode attach --live
 | `follow` | 只观察，**绝不拉起** NapCat | 只想监控 + 通知 |
 | `embed` | 守护先起 → 由守护拉起 NapCat → 接管并负责重启 | **"随 NapCat 启动"推荐**：开机只启守护 |
 
+### 后台静默
+
+- 守护进程本身不创建窗口；
+- 需要拉起 NapCat 时，Windows 下默认用 **VBS + wscript 隐藏窗口**启动（`launch.background=true`），不会弹黑色控制台；
+- **桌面 QQ 客户端自己的登录窗口**属于 QQ 行为，工具默认不干预。如果它弹出并且你介意，可设 `launch.hideWindows=true`（**实验性**：会隐藏所有 `QQ.exe` 窗口，可能误隐藏你主号的窗口，慎用）；
+- 模拟器/手机 QQ 的操作全部通过 ADB 完成，不会把模拟器窗口提到前台。
+
 ### 开机自启（Windows 计划任务）
 
 双击 **`4-安装开机自启.bat`**：
@@ -235,7 +242,8 @@ node src\cli.mjs run --mode attach --live
 | `RISK_LIMITED` | 日志出现风控/限制登录 | **停手 + 通知**，等本人在手机 QQ 处理 |
 | `VERIFY_REQUIRED` | 需要短信/设备锁/申诉 | **停手 + 通知** |
 | `WS_HUNG` | 端口在但 OneBot 无响应 | 计入离线，达阈值后重启 |
-| `NAPCAT_DOWN` | NapCat 没运行 | `embed` 模式下拉起；否则通知 |
+| `NAPCAT_NO_WS` | NapCat 进程在跑但 OneBot 端口未监听（卡在登录/二维码已失效） | 计入离线，达阈值后**重启出码** |
+| `NAPCAT_DOWN` | NapCat 没运行 | `launch.enabled` 时拉起（后台隐藏窗口）；否则通知 |
 | `COOLDOWN` / `MANUAL_TAKEOVER` | 策略暂停中 | 等待 |
 
 **常见问题**
