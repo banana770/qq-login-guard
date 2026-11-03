@@ -297,6 +297,7 @@ export class Guard {
       if (verify.ok) {
         this.logEvent('info', `自愈成功，${Math.round(verify.waitedMs / 1000)}s 后恢复在线`);
         this.lastAction = { kind: 'heal', ok: true, res, verify, at: nowIso() };
+        this.lastError = '';
         await this.driver.cleanup?.();
         await this.notify('HEAL_OK', { extra: `${Math.round(verify.waitedMs / 1000)}s` });
       } else {
