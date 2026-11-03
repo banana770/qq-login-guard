@@ -1,0 +1,21 @@
+# 统一换行，避免 Windows 用户克隆后 bat 变成 LF（会引发 cmd 解析错乱）
+* text=auto
+
+# Windows 批处理必须是 CRLF；内容为 GBK（中文 Windows 控制台）。
+# 注意：bat 文件请勿用编辑器另存为 UTF-8，否则中文会乱码。
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+# 其余文本统一 LF
+*.mjs text eol=lf
+*.js text eol=lf
+*.json text eol=lf
+*.md text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+*.sh text eol=lf
+
+# 二进制
+*.png binary
+*.jpg binary
+*.ico binary

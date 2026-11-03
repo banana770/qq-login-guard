@@ -1,0 +1,26 @@
+# 本机配置（含 NapCat token / 个人路径），不要提交
+config.local.json
+config.json
+qq-login-guard.config.json
+
+# 运行时数据（锁 / 审计 / 计数）
+.qq-login-guard/
+
+# 依赖与诊断产物
+node_modules/
+dsh-plugin/node_modules/
+*.log
+
+# 生成物 / 临时文件
+qr_fresh.png
+big_qr.png
+*.tmp
+*.bak
+
+# 系统文件
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# demo artifacts
+.demo/

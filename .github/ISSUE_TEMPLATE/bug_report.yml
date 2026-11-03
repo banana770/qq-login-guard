@@ -1,0 +1,54 @@
+name: Bug 报告
+description: 报告自愈失败、状态异常、崩溃等问题
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        感谢反馈！请先确认已阅读 README 的「状态与排查」与 `docs/COMPLIANCE.md`。
+        **不要贴 token、QQ 号全称、二维码截图、完整日志原文**（请打码）。
+  - type: input
+    id: version
+    attributes:
+      label: 版本
+      description: qq-login-guard 版本 / commit
+    validations:
+      required: true
+  - type: input
+    id: env
+    attributes:
+      label: 环境
+      description: Windows 版本 / Node 版本 / NapCat 版本 / 模拟器与手机 QQ 版本
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: 复现步骤
+      description: 越具体越好（在做什么、什么时候掉线、看到了什么）
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: 期望结果 / 实际结果
+    validations:
+      required: true
+  - type: textarea
+    id: doctor
+    attributes:
+      label: 自检输出（脱敏）
+      description: |
+        ```
+        node src/cli.mjs doctor
+        node src/cli.mjs rehearse
+        ```
+    validations:
+      required: false
+  - type: textarea
+    id: audit
+    attributes:
+      label: 相关审计片段（脱敏）
+      description: `.qq-login-guard/audit.jsonl` 中对应时间段的片段
+    validations:
+      required: false

@@ -1,0 +1,48 @@
+{
+  "name": "qq-login-guard",
+  "version": "0.1.0",
+  "description": "Host-agnostic login self-healing sidecar for NapCat / OneBot v11 real QQ accounts: detect logout, produce QR, drive an Android emulator's mobile QQ to scan it, verify recovery, notify and circuit-break.",
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "bin": {
+    "qq-login-guard": "./src/cli.mjs"
+  },
+  "main": "./src/index.mjs",
+  "exports": {
+    ".": "./src/index.mjs",
+    "./probe": "./src/probe.mjs",
+    "./state": "./src/state.mjs",
+    "./config": "./src/config.mjs"
+  },
+  "files": [
+    "src",
+    "scripts",
+    "docs",
+    "README.md",
+    "LICENSE",
+    "config.example.json"
+  ],
+  "scripts": {
+    "start": "node src/cli.mjs run --mode attach",
+    "setup": "node src/cli.mjs setup",
+    "doctor": "node src/cli.mjs doctor",
+    "rehearse": "node src/cli.mjs rehearse",
+    "test": "node --test test/"
+  },
+  "keywords": [
+    "qq",
+    "napcat",
+    "onebot",
+    "onebot11",
+    "qq-login",
+    "qrcode",
+    "self-healing",
+    "adb",
+    "mumu",
+    "android-emulator",
+    "uiautomator"
+  ],
+  "license": "MIT"
+}

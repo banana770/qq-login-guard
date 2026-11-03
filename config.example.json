@@ -1,0 +1,73 @@
+{
+  "profiles": [
+    {
+      "id": "main",
+      "napcat": {
+        "wsUrl": "ws://127.0.0.1:30011",
+        "tokenEnv": "QQ_LOGIN_GUARD_TOKEN",
+        "token": "",
+        "account": "",
+        "dir": "",
+        "qrPath": "cache/qrcode.png",
+        "logPath": "napcat_hidden.log",
+        "launch": {
+          "enabled": false,
+          "cmd": "cmd.exe",
+          "args": [
+            "/c",
+            "launcher-user.bat",
+            "{account}"
+          ],
+          "cwd": "",
+          "waitMs": 90000
+        }
+      },
+      "device": {
+        "driver": "manual",
+        "adb": {
+          "exe": "",
+          "host": "127.0.0.1",
+          "port": 16384,
+          "remotePic": "/storage/emulated/0/DCIM/Camera/qr_fresh.png",
+          "resolution": {
+            "width": 1080,
+            "height": 1920,
+            "adaptive": true
+          },
+          "coldStartShortcut": "",
+          "qqPackage": "com.tencent.mobileqq",
+          "qqActivity": "com.tencent.mobileqq.activity.SplashActivity",
+          "qqLaunchIntent": ""
+        }
+      },
+      "policy": {
+        "checkIntervalMs": 30000,
+        "offlineStrikes": 3,
+        "cooldownMs": 180000,
+        "maxRestartPerHour": 3,
+        "maxAutoHealPerDay": 12,
+        "staleQrMs": 240000,
+        "catchUpWindowMs": 1800000,
+        "manualPauseMs": 1800000
+      },
+      "notify": {
+        "channels": []
+      },
+      "safety": {
+        "dryRun": true,
+        "secureWipe": true,
+        "deleteBeyondOwnFiles": false
+      }
+    }
+  ],
+  "server": {
+    "enabled": true,
+    "host": "127.0.0.1",
+    "port": 39100,
+    "token": ""
+  },
+  "logging": {
+    "level": "info",
+    "jsonl": true
+  }
+}
