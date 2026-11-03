@@ -46,6 +46,25 @@ function taskExists(name) {
   return r.ok;
 }
 
+/** 任务是否启用（true/false/未知 null）。schtasks 输出是 GBK，单独解码。 */
+function taskEnabled(name) {
+  let buf;
+  try {
+    buf = execFileSync('schtasks.exe', ['/Query', '/TN', name, '/FO', 'LIST', '/V'], { windowsHide: true });
+  } catch {
+    return null;
+  }
+  let text = '';
+  try {
+    text = new TextDecoder('gbk').decode(buf);
+  } catch {
+    text = Buffer.from(buf).toString('utf8');
+  }
+  if (/(已禁用|Disabled)/i.test(text)) return false;
+  if (/(已启用|Enabled)/i.test(text)) return true;
+  return null;
+}
+
 function whoami() {
   const r = sh('whoami.exe', []);
   if (r.ok && r.out.trim()) return r.out.trim();
@@ -151,10 +170,13 @@ function main() {
   console.log(`命令: "${nodeExe}" "${CLI}" run --mode ${mode}${live ? ' --live' : ''}`);
   console.log(`工作目录: ${ROOT}`);
 
-  // 1) 冲突检查：旧 guard.mjs 计划任务还在，会形成"双头控制"
-  const conflicts = OLD_TASKS.filter((t) => t !== TASK_NAME && taskExists(t));
+  // 1) 冲突检查：只有"仍然启用"的旧守护计划任务才会形成双头控制；已禁用不算冲突
+  const conflicts = OLD_TASKS.filter((t) => {
+    if (t === TASK_NAME || !taskExists(t)) return false;
+    return taskEnabled(t) !== false;
+  });
   if (conflicts.length) {
-    console.log(`\n⚠ 检测到旧的守护计划任务: ${conflicts.join(', ')}`);
+    console.log(`\n⚠ 检测到仍启用的旧守护计划任务: ${conflicts.join(', ')}`);
     console.log('  同时启用会和本工具抢同一个 NapCat（双头控制：两边都重启/抢二维码）。');
     console.log('  建议先停用旧的：');
     for (const t of conflicts) {
@@ -165,11 +187,17 @@ function main() {
       console.log('\n已中止（未写系统）。确认要同时保留请加 --force（不推荐）。');
       process.exit(2);
     }
+  } else {
+    for (const t of OLD_TASKS) {
+      if (t !== TASK_NAME && taskExists(t) && taskEnabled(t) === false) {
+        console.log(`✓ 旧任务 ${t} 已处于禁用状态（不会双头控制），可直接安装本任务`);
+      }
+    }
   }
 
   if (args.check) {
     console.log('\n[check] 环境检查完成；未创建任务。去掉 --check 即可安装。');
-    console.log(`[check] 任务是否已存在: ${taskExists(TASK_NAME) ? '是' : '否'}`);
+    console.log(`[check] 本任务是否已存在: ${taskExists(TASK_NAME) ? '是' : '否'}`);
     return;
   }
 
